@@ -58,6 +58,16 @@ class SignIn:
         domain = input("Please input your 1Password domain in the format <something>.1password.com: ")
         return domain
 
+    @staticmethod
+    def current_account() -> CompletedProcess[Any] | CompletedProcess[str]:
+        completed_process = subprocess.run(
+            "op whoami",
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+        return completed_process
+
     def _update_bash_account(self, account: str, bash_profile: BashProfile) -> None:
         os.environ[self._env_account] = account
         bash_profile.update_profile(self._env_account, account)
@@ -82,8 +92,18 @@ class ManualSignIn(SignIn):
         bp = BashProfile()
         os.environ["OP_DEVICE"] = get_device_uuid(bp)
         # reuse existing op session
-        if isinstance(account, str) and "{}_{}".format(self._env_account, account) in os.environ:
-            pass
+        env_keys = [
+            self._env_session,
+        ]
+        if isinstance(account, str):
+            env_keys.append("{}_{}".format(self._env_account, account))
+
+        # check if any env key is in current environment
+        if(any(key in env_key for env_key in os.environ.keys()) for key in env_keys):
+            # check if session is still valid
+            cp = self.current_account()
+            if cp.returncode != 0:
+                raise Exception("please login with $(op signin)")
         # Check first time: if true, full signin, else use shortened signin
         elif self._check_not_first_time(bp):
             self.encrypted_master_password, self.session_key = self.signin_wrapper(
