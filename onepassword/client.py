@@ -103,7 +103,7 @@ class ManualSignIn(SignIn):
             # check if session is still valid
             cp = self.current_account()
             if cp.returncode != 0:
-                raise Exception("please login with $(op signin)")
+                raise Exception("please login with `eval $(op signin)`")
         # Check first time: if true, full signin, else use shortened signin
         elif self._check_not_first_time(bp):
             self.encrypted_master_password, self.session_key = self.signin_wrapper(
